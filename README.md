@@ -1,3 +1,4 @@
 # Steiner-Tree-Problem
-Source code for:
-"Learning to Prune Instances of Steiner Tree Problem in Graphs"
+# By Jiwei Zhang, Deepak Ajwani
+# University College Dublin
+"Learning to Prune Instances of Steiner Tree Problem in Graphs" INOC 2022
