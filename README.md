@@ -1,4 +1,5 @@
-# Steiner-Tree-Problem  
+# Learning to Prune Instances of Steiner Tree Problem in Graphs
 By Jiwei Zhang, Deepak Ajwani  
 University College Dublin  
-"Learning to Prune Instances of Steiner Tree Problem in Graphs" INOC 2022
+Datasets: http://steinlib.zib.de/steinlib.php  
+Formulation: A dual ascent approach for steiner tree problems on a directed graph (1984)  
