@@ -53,16 +53,15 @@ def ILP(graph):
     opt_cost = m.objVal
     
     opt_edges = []
-    opt_vertices = []
     
     for v in m.getVars():
         # save the vertices
         if v.varName.startswith('y') and v.x != 0:
-            opt_vertices.append((v.varName[2:-1], v.x))
+            opt_edges.append((v.varName[2:-1], v.x))
                 
     opt_runtime = m.Runtime
     
-    return opt_vertices, opt_cost, opt_runtime
+    return opt_edges, opt_cost, opt_runtime
 
 def LP(graph):
     # set define
@@ -114,15 +113,15 @@ def LP(graph):
     
     # save the optimal solution
     opt_cost = m.objVal
-    
+
+
     opt_edges = []
-    opt_vertices = []
     
     for v in m.getVars():
         # save the vertices
         if v.varName.startswith('y') and v.x != 0:
-            opt_vertices.append((v.varName[2:-1], v.x))
+            opt_edges.append((v.varName[2:-1], v.x))
                 
     opt_runtime = m.Runtime
     
-    return opt_vertices, opt_cost, opt_runtime
+    return opt_edges, opt_cost, opt_runtime

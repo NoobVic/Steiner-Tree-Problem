@@ -187,19 +187,24 @@ def dataframe_generate(ds_filename, log_filename):
     df['Normalized Weight'] = normalize(df['Weight'])
     df['Normalized Weight Std'] = normalize(df['Weight'], True)
 
-    # Feature 4: Variance (TODO)
-    df['Variance'] = df['Weight'].var()
+    # # Feature 4: Variance (TODO)
+    # df['Variance'] = df['Weight'].var()
 
-    # Feature 5 & 6: Local Rank
-    df['Local Rank 1'] = df.apply(
+    # Feature 4 & 5 & 6: Local Rank
+    df['Local Rank Max'] = df.apply(
         lambda row : localrank(
-            row['Node 1'], row['Node 2'], df[['Node 1', 'Node 2', 'Weight']]),
+            row['Node 1'], row['Node 2'], df[['Node 1', 'Node 2', 'Weight']], 'min'),
         axis=1
     )
 
-    df['Local Rank 2'] = df.apply(
+    df['Local Rank Min'] = df.apply(
         lambda row : localrank(
-            row['Node 2'], row['Node 1'], df[['Node 1', 'Node 2', 'Weight']]),
+            row['Node 1'], row['Node 2'], df[['Node 1', 'Node 2', 'Weight']],'max'),
+        axis=1
+    )
+
+    df['Edges Connected'] = df.apply(
+        lambda row : get_connected(df, row['Node 1'], row['Node 2']),
         axis=1
     )
 
@@ -271,34 +276,61 @@ def normalize(series, isStd=False):
         result = (series-min)/delta
     return result
 
-def localrank(target, node, df):
+def localrank(node1, node2, df, minmax):
     # Find all edges connected to the target node
+    target = node1
+    node = node2
     tmp_df = df.loc[(df['Node 1'] == target) | (df['Node 2'] == target)]
     # Rank them by the weights
     tmp_df = tmp_df.sort_values(by=['Weight'],ignore_index=True)
     # Locate target edge's index
-    index = tmp_df.index[
+    index1 = tmp_df.index[
         (tmp_df['Node 1']==node) | (tmp_df['Node 2']==node)].tolist()[0]
-    # Return the normalized rank of it
-    return index/len(df)
+
+    target = node2
+    node = node1
+    tmp_df = df.loc[(df['Node 1'] == target) | (df['Node 2'] == target)]
+    tmp_df = tmp_df.sort_values(by=['Weight'],ignore_index=True)
+    index2 = tmp_df.index[
+        (tmp_df['Node 1']==node) | (tmp_df['Node 2']==node)].tolist()[0]
+    
+    if minmax == 'min':
+        return min(index1, index2)
+    if minmax == 'max':
+        return max(index1, index2)
+    print("ERROR: Undefined type for minmax: ", minmax)
+    return None
+
+def  get_connected(df, node1, node2):
+    count = 0
+    count += len(df.loc[(df['Node 1'] == node1)|(df['Node 2'] == node1)])
+    count += len(df.loc[(df['Node 1'] == node2)|(df['Node 2'] == node2)])
+    count -= 2
+    return count
 
 def solve(filename, clf, ds_path, log_path, threshold):
+    print("The current problem: ", filename)
     graph = read_graph_undirected(ds_path)
-    mst = get_mst(graph)
-
-    df = dataframe_generate(ds_path, log_path)
+    print("Graph readed.")
+    print("Calculating features...")
+    df, fe_rt = dataframe_generate(ds_path, log_path)
+    print("Feature calculation runtime (LP not included): ", fe_rt)
     df_pruned_ml = prune_ml(clf, df, threshold)
     df_pruned_lp = prune_lp(df)
-
-    graph_ml = reconstruct(mst, df_pruned_ml, graph[2])
-    graph_lp = reconstruct(mst, df_pruned_lp, graph[2])
-
-    print("Problem: ", filename, "Pruning Method: ML")
+    print("Pruning finished.")
+    graph_ml = reconstruct(df_pruned_ml, graph[2])
+    graph_lp = reconstruct(df_pruned_lp, graph[2])
+    print("Pruning Method: ML")
+    print("Solving...")
     sol, obj, rt = ILP(graph_ml)
+    print("Solved.")
     print("The OBJ is: ", obj)
     print("The Runtime is: ", rt)
-    print("Problem: ", filename, "Pruning Method: LP")   
+
+    print("Pruning Method: LP")   
+    print("Solving...")
     sol, obj, rt = ILP(graph_lp)
+    print("Solved.")
     print("The OBJ is: ", obj)
     print("The Runtime is: ", rt)
 
@@ -308,16 +340,13 @@ def prune_ml(clf, df, threshold):
     y_pred = (y_pred_proba [:,1] >= threshold).astype('int')
     df['Predict'] = y_pred
     df_pruned = df.loc[(df['Predict'] > 0) | (df['LP'] > 0)]
-    return df_pruned['Node 1', 'Node 2', 'Weight']
+    return df_pruned[['Node 1', 'Node 2', 'Weight']]
 
 def prune_lp(df):
     df_pruned = df.loc[df['LP'] > 0]
-    return df_pruned['Node 1', 'Node 2', 'Weight']
+    return df_pruned[['Node 1', 'Node 2', 'Weight']]
 
-def get_mst(graph):
-    return None
-
-def reconstruct(mst, df, terminals):
+def reconstruct(df, terminals):
     vertices, arcs = graph_generate(df)
     graph = (vertices, arcs, terminals)
     return graph
